@@ -11,7 +11,8 @@
           <div v-for="(tile, i) in mapa" :key="i" class="tile" :style="{ top: tile.y + 'px', left: tile.x + 'px' }" />
 
           <!-- jugador y objetivo -->
-          <img class="player" src="@/assets/player.png" :style="{top: player.y + playerOffset + 'px',left: player.x + playerOffset + 'px',transform: 'rotate(' + rotationAngle + 'deg)'}" />
+<!-- reemplazo temporal -->
+<div class="player" :style="{top: player.y + playerOffset + 'px',left: player.x + playerOffset + 'px',transform: 'rotate(' + rotationAngle + 'deg)', backgroundColor: 'red', width: '30px', height: '30px', position: 'absolute'}" />
           <div class="goal" :style="{ top: goal.y + 'px', left: goal.x + 'px' }" />
         </div>
 
