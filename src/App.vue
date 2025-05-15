@@ -3,24 +3,24 @@
     <!-- Menú de selección -->
     <div v-if="!varianteSeleccionada" class="menu-centro">
       <h2>Selecciona una variante</h2>
-      <button v-on:click="iniciarVariante(1)">Variante 1</button>
+      <!--<button v-on:click="iniciarVariante(1)">Variante 1</button>-->
       <button v-on:click="iniciarVariante(2)">Variante 2</button>
     </div>
 
     <!-- Solo se muestra el juego si selecciona la variante 1 o 2 -->
-    <JuegoMapa1 v-if="varianteSeleccionada === 1" />
+    <!--<JuegoMapa1 v-if="varianteSeleccionada === 1" />-->
     <JuegoMapa2 v-if="varianteSeleccionada === 2" />
   </div>
 </template>
 
 <script>
-import JuegoMapa1 from './components/JuegoMapa1.vue'
+//import JuegoMapa1 from './components/JuegoMapa1.vue'
 import JuegoMapa2 from './components/JuegoMapa2.vue'
 
 export default {
   name: 'App',
   components: {
-    JuegoMapa1: JuegoMapa1,
+    //JuegoMapa1: JuegoMapa1,
     JuegoMapa2: JuegoMapa2
   },
   data: function () {
