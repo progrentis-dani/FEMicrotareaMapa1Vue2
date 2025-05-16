@@ -422,7 +422,7 @@ color: rgb(255, 255, 255);
 
 .menu-container {
 position: fixed;
-inset: 0;
+top: 0; left: 0; right: 0; bottom: 0;
 background: #f5f5f5;
 display: flex;
 align-items: center;
