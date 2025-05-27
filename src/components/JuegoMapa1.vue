@@ -11,16 +11,19 @@
           <div v-for="(tile, i) in mapa" :key="i" class="tile" :style="{ top: tile.y + 'px', left: tile.x + 'px' }" />
 
           <!-- jugador y objetivo -->
-<!-- reemplazo temporal -->
-<div class="player" :style="{top: player.y + playerOffset + 'px',left: player.x + playerOffset + 'px',transform: 'rotate(' + rotationAngle + 'deg)', backgroundColor: 'red', width: '30px', height: '30px', position: 'absolute'}" />
-          <div class="goal" :style="{ top: goal.y + 'px', left: goal.x + 'px' }" />
-        </div>
+            <img class="player" src="@/assets/player.png" :style="{top: player.y + playerOffset + 'px',left: player.x + playerOffset + 'px',transform: 'rotate(' + rotationAngle + 'deg)'}" />
+            <div class="goal" :style="{ top: goal.y + 'px', left: goal.x + 'px' }" />
+          </div>
 
         <!-- instrucciones -->
         <div class="instruction-bar">
           <span class="arcade-text" v-if="!finalizado">{{ instrucciones[paso]?.texto || '-' }}</span>
           <span class="arcade-text" v-else>{{ mensajeFinal }}</span>
         </div>
+      </div>
+      <!-- botón de reinicio -->
+      <div v-if="finalizado" class="reinicio-container">
+        <button class="btn" @click="reiniciar">🔄 Reiniciar</button>
       </div>
 
       <div class="info" v-if="!mostrarMenu">
@@ -326,31 +329,51 @@ export default {
     return resultado
     },
     avanzarAlSiguienteCruce() {
-    if (this.paso >= this.instrucciones.length) {
-      this.finalizado = true;
-      this.mensajeFinal = this.errores < 3 ? '¡Bien hecho!' : '¡Fallaste!';
-      return;
-    }
-
-    const siguiente = this.instrucciones[this.paso];
-    const intervalo = setInterval(() => {
-      if (this.player.x < siguiente.x) {
+  if (this.paso >= this.instrucciones.length) {
+    // Mover hasta la meta antes de finalizar
+    const finalDestino = { x: this.goal.x, y: this.goal.y };
+    const moverAFinal = setInterval(() => {
+      if (this.player.x < finalDestino.x) {
         this.player.x += this.tileSize;
         this.player.dir = 'right';
-      } else if (this.player.x > siguiente.x) {
+      } else if (this.player.x > finalDestino.x) {
         this.player.x -= this.tileSize;
         this.player.dir = 'left';
-      } else if (this.player.y < siguiente.y) {
+      } else if (this.player.y < finalDestino.y) {
         this.player.y += this.tileSize;
         this.player.dir = 'down';
-      } else if (this.player.y > siguiente.y) {
+      } else if (this.player.y > finalDestino.y) {
         this.player.y -= this.tileSize;
         this.player.dir = 'up';
       } else {
-        clearInterval(intervalo);
-        this.esperandoRespuesta = true;
+        clearInterval(moverAFinal);
+        this.finalizado = true;
+        this.mensajeFinal = this.errores < 3 ? '¡Bien hecho!' : 'Inténtalo de nuevo';
       }
     }, 300);
+    return;
+  }
+
+  const destino = this.instrucciones[this.paso];
+  const mover = setInterval(() => {
+    if (this.player.x < destino.x) {
+      this.player.x += this.tileSize;
+      this.player.dir = 'right';
+    } else if (this.player.x > destino.x) {
+      this.player.x -= this.tileSize;
+      this.player.dir = 'left';
+    } else if (this.player.y < destino.y) {
+      this.player.y += this.tileSize;
+      this.player.dir = 'down';
+    } else if (this.player.y > destino.y) {
+      this.player.y -= this.tileSize;
+      this.player.dir = 'up';
+    } else {
+      clearInterval(mover);
+      this.esperandoRespuesta = true; // Activar botones
+    }
+  }, 300);
+
     },
     generarInstrucciones(mapa, cruces) {
     const instrucciones = []
@@ -371,6 +394,32 @@ export default {
         instrucciones.push({ x: actual.x, y: actual.y, texto: instruccion });
     }
     return instrucciones
+    },
+    reiniciar() {
+    // Reiniciar variables principales
+    this.paso = 0;
+    this.errores = 0;
+    this.finalizado = false;
+    this.mensajeFinal = '';
+    this.tiempoRestante = 120;
+
+    // Volver a generar el mundo
+    this.ajustarDimensionesAlGameArea();
+    const crudo = this.generarCamino(this.ancho, this.alto);
+    this.calles = this.generarCalles(crudo, this.ancho, this.alto);
+    this.mapa = crudo.map(([x, y]) => ({ x: x * this.tileSize, y: y * this.tileSize }));
+    const cruces = this.detectarCruces(this.mapa);
+    this.instrucciones = this.generarInstrucciones(this.mapa, cruces);
+
+    // Reiniciar jugador y meta
+    this.player.x = this.mapa[0].x;
+    this.player.y = this.mapa[0].y;
+    this.player.dir = 'right';
+    this.goal.x = this.mapa[this.mapa.length - 1].x;
+    this.goal.y = this.mapa[this.mapa.length - 1].y;
+
+    // Comenzar la primera secuencia
+    this.avanzarAlSiguienteCruce();
     },
     getDireccion(dx, dy) {
       if (dx === this.tileSize) return 'right';
