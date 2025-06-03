@@ -1,8 +1,23 @@
 <template>
   <div class="container">
     <div class="main-content">
-      <div class="game-area" ref="gameAreaRef">
-        <div class="world" :style="mundoStyle">
+    <div
+      class="game-area"
+      :class="{
+        'vibracion-error': borderState === 'error',
+        'borde-verde': borderState === 'correcto'
+      }"
+      ref="gameAreaRef"
+    >
+        <div v-if="!juegoIniciado" class="blur-overlay"></div>
+        <button
+          v-if="!juegoIniciado"
+          class="boton-iniciar"
+          @click="iniciarJuego"
+        >
+          Iniciar
+        </button>
+        <div v-if="juegoIniciado" class="world" :style="mundoStyle">
 
           <!-- calles -->
           <div v-for="(calle, i) in calles" :key="'calle-' + i" class="calle" :style="{ top: calle.y + 'px', left: calle.x + 'px' }" />
@@ -16,17 +31,13 @@
           </div>
 
         <!-- instrucciones -->
-        <div class="instruction-bar">
+        <div v-if="juegoIniciado" class="instruction-bar">
           <span class="arcade-text" v-if="!finalizado">{{ instrucciones[paso]?.texto || '-' }}</span>
           <span class="arcade-text" v-else>{{ mensajeFinal }}</span>
         </div>
       </div>
-      <!-- botón de reinicio -->
-      <div v-if="finalizado" class="reinicio-container">
-        <button class="btn" @click="reiniciar">🔄 Reiniciar</button>
-      </div>
-
-      <div class="info" v-if="!mostrarMenu">
+      
+      <div class="info" v-if="juegoIniciado && !mostrarMenu">
         <h3 class="arcade-text">Info</h3>
         <p class="arcade-text">⏳ {{ formatoTiempo(tiempoRestante) }}</p>
         <p class="arcade-text">👣 {{ paso }}</p>
@@ -35,6 +46,10 @@
         <div class="info-controls" v-if="esperandoRespuesta && !finalizado">
           <button class="btn" @click="responder('Izquierda')">◀</button>
           <button class="btn" @click="responder('Derecha')">▶</button>
+        </div>
+        <!-- botón de reinicio -->
+        <div v-if="finalizado" class="reinicio-container">
+          <button class="btn" @click="reiniciar">🔄</button>
         </div>
       </div>
     </div>
@@ -46,6 +61,7 @@
 export default {
   data() {
     return {
+      juegoIniciado: false,
       tileSize: 40,
       ancho: 0,
       alto: 0,
@@ -62,7 +78,8 @@ export default {
       goal: { x: 0, y: 0 },
       playerSize: 30,
       mostrarMenu: false,
-      temporizador: null
+      temporizador: null,
+      borderState: ''
     };
   },
   computed: {
@@ -91,20 +108,46 @@ export default {
     }
   },
   mounted() {
+
+  this.ajustarDimensionesAlGameArea();
+  
+  },
+  methods: {
+   iniciarJuego() {
+    this.juegoIniciado = true;
     this.tiempoRestante = 120;
-    this.ajustarDimensionesAlGameArea();
+
     const crudo = this.generarCamino(this.ancho, this.alto);
     this.calles = this.generarCalles(crudo, this.ancho, this.alto);
     this.mapa = crudo.map(([x, y]) => ({ x: x * this.tileSize, y: y * this.tileSize }));
+
     const cruces = this.detectarCruces(this.mapa);
     this.instrucciones = this.generarInstrucciones(this.mapa, cruces);
+
     this.player.x = this.mapa[0].x;
     this.player.y = this.mapa[0].y;
     this.goal.x = this.mapa[this.mapa.length - 1].x;
     this.goal.y = this.mapa[this.mapa.length - 1].y;
+
     this.avanzarAlSiguienteCruce();
+
+    this.temporizador = setInterval(() => {
+      if (this.tiempoRestante > 0 && !this.finalizado) {
+        this.tiempoRestante--;
+      } else if (this.tiempoRestante <= 0) {
+  this.finalizado = true;
+  this.mensajeFinal = '¡Tiempo agotado!';
+  this.borderState = 'error'; // <- AGREGAR ESTO
+  clearInterval(this.temporizador);
+  
+  // Quitar el borde después de un breve tiempo
+  setTimeout(() => {
+    this.borderState = '';
+  }, 1000);
+}
+
+    }, 1000);
   },
-  methods: {
     ajustarDimensionesAlGameArea() {
       const gameArea = this.$el.querySelector('.game-area');
       const width = gameArea.offsetWidth;
@@ -329,30 +372,31 @@ export default {
     return resultado
     },
     avanzarAlSiguienteCruce() {
-  if (this.paso >= this.instrucciones.length) {
-    // Mover hasta la meta antes de finalizar
-    const finalDestino = { x: this.goal.x, y: this.goal.y };
-    const moverAFinal = setInterval(() => {
-      if (this.player.x < finalDestino.x) {
-        this.player.x += this.tileSize;
-        this.player.dir = 'right';
-      } else if (this.player.x > finalDestino.x) {
-        this.player.x -= this.tileSize;
-        this.player.dir = 'left';
-      } else if (this.player.y < finalDestino.y) {
-        this.player.y += this.tileSize;
-        this.player.dir = 'down';
-      } else if (this.player.y > finalDestino.y) {
-        this.player.y -= this.tileSize;
-        this.player.dir = 'up';
-      } else {
-        clearInterval(moverAFinal);
-        this.finalizado = true;
-        this.mensajeFinal = this.errores < 3 ? '¡Bien hecho!' : 'Inténtalo de nuevo';
-      }
-    }, 300);
-    return;
-  }
+    if (this.paso >= this.instrucciones.length) {
+      // Mover hasta la meta antes de finalizar
+      const finalDestino = { x: this.goal.x, y: this.goal.y };
+      const moverAFinal = setInterval(() => {
+        if (this.player.x < finalDestino.x) {
+          this.player.x += this.tileSize;
+          this.player.dir = 'right';
+        } else if (this.player.x > finalDestino.x) {
+          this.player.x -= this.tileSize;
+          this.player.dir = 'left';
+        } else if (this.player.y < finalDestino.y) {
+          this.player.y += this.tileSize;
+          this.player.dir = 'down';
+        } else if (this.player.y > finalDestino.y) {
+          this.player.y -= this.tileSize;
+          this.player.dir = 'up';
+        } else {
+          clearInterval(moverAFinal);
+          this.finalizado = true;
+          this.mensajeFinal = this.errores < 3 ? '¡Bien hecho!' : 'Inténtalo de nuevo';
+          this.borderState = 'correcto';
+        }
+      }, 250);
+      return;
+    }
 
   const destino = this.instrucciones[this.paso];
   const mover = setInterval(() => {
@@ -372,7 +416,7 @@ export default {
       clearInterval(mover);
       this.esperandoRespuesta = true; // Activar botones
     }
-  }, 300);
+  }, 250);
 
     },
     generarInstrucciones(mapa, cruces) {
@@ -396,31 +440,47 @@ export default {
     return instrucciones
     },
     reiniciar() {
-    // Reiniciar variables principales
-    this.paso = 0;
-    this.errores = 0;
-    this.finalizado = false;
-    this.mensajeFinal = '';
-    this.tiempoRestante = 120;
+  clearInterval(this.temporizador); // Detiene temporizador anterior
+  this.paso = 0;
+  this.errores = 0;
+  this.esperandoRespuesta = false;
+  this.finalizado = false;
+  this.mensajeFinal = '';
+  this.tiempoRestante = 120;
 
-    // Volver a generar el mundo
-    this.ajustarDimensionesAlGameArea();
-    const crudo = this.generarCamino(this.ancho, this.alto);
-    this.calles = this.generarCalles(crudo, this.ancho, this.alto);
-    this.mapa = crudo.map(([x, y]) => ({ x: x * this.tileSize, y: y * this.tileSize }));
-    const cruces = this.detectarCruces(this.mapa);
-    this.instrucciones = this.generarInstrucciones(this.mapa, cruces);
+  const crudo = this.generarCamino(this.ancho, this.alto);
+  this.calles = this.generarCalles(crudo, this.ancho, this.alto);
+  this.mapa = crudo.map(([x, y]) => ({ x: x * this.tileSize, y: y * this.tileSize }));
+  const cruces = this.detectarCruces(this.mapa);
+  this.instrucciones = this.generarInstrucciones(this.mapa, cruces);
 
-    // Reiniciar jugador y meta
-    this.player.x = this.mapa[0].x;
-    this.player.y = this.mapa[0].y;
-    this.player.dir = 'right';
-    this.goal.x = this.mapa[this.mapa.length - 1].x;
-    this.goal.y = this.mapa[this.mapa.length - 1].y;
+  this.player.x = this.mapa[0].x;
+  this.player.y = this.mapa[0].y;
+  this.player.dir = 'right';
 
-    // Comenzar la primera secuencia
-    this.avanzarAlSiguienteCruce();
-    },
+  this.goal.x = this.mapa[this.mapa.length - 1].x;
+  this.goal.y = this.mapa[this.mapa.length - 1].y;
+
+  this.avanzarAlSiguienteCruce();
+
+  this.temporizador = setInterval(() => {
+    if (this.tiempoRestante > 0 && !this.finalizado) {
+      this.tiempoRestante--;
+    } else if (this.tiempoRestante <= 0) {
+  this.finalizado = true;
+  this.mensajeFinal = '¡Tiempo agotado!';
+  this.borderState = 'error'; // <- AGREGAR ESTO
+  clearInterval(this.temporizador);
+  
+  // Quitar el borde después de un breve tiempo
+  setTimeout(() => {
+    this.borderState = '';
+  }, 1000);
+}
+
+  }, 1000);
+},
+
     getDireccion(dx, dy) {
       if (dx === this.tileSize) return 'right';
       if (dx === -this.tileSize) return 'left';
@@ -438,12 +498,26 @@ export default {
       if (!instruccion) return;
 
       const correcta = instruccion.texto === direccion;
+
       if (correcta) {
+        this.borderState = 'correcto';
+        setTimeout(() => {
+          this.borderState = '';
+        }, 500);
+
         this.paso++;
         this.esperandoRespuesta = false;
         this.avanzarAlSiguienteCruce();
+
       } else {
+        this.borderState = 'error';
         this.errores++;
+
+        // Vibrar con clase y luego quitar
+        setTimeout(() => {
+          this.borderState = '';
+        }, 500);
+
         if (this.errores >= 3) {
           this.finalizado = true;
           this.mensajeFinal = '¡Fallaste!';
@@ -535,6 +609,32 @@ border: 4px solid black;
 background-color: rgb(16, 97, 16);
 background-image: url("@/assets/moss.jpg");
 overflow: hidden;
+}
+
+.blur-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.2); /* opcional */
+  z-index: 1;
+}
+
+.boton-iniciar {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1rem 2rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  font-family: 'Press Start 2P';
+  background-color: #499749;
+  border: 4px solid #005000;
+  color: white;
 }
 
 @keyframes vibracion {
@@ -649,6 +749,11 @@ border: none;
 cursor: pointer;
 border-radius: 3%;
 font-size: 50px;
+}
+
+.reinicio-container {
+  text-align: center;
+  margin-top: 20px;
 }
 
 .btn:hover {
