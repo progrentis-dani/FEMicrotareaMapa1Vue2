@@ -44,8 +44,8 @@
         <p class="arcade-text">❤️ {{ 3 - errores }}</p>
 
         <div class="info-controls" v-if="esperandoRespuesta && !finalizado">
-          <button class="btn" @click="responder('Izquierda')">◀</button>
-          <button class="btn" @click="responder('Derecha')">▶</button>
+          <button class="btn" @click="responder('Izquierda')" :disabled="botonDeshabilitado">◀</button>
+          <button class="btn" @click="responder('Derecha')" :disabled="botonDeshabilitado">▶</button>
         </div>
         <div v-if="finalizado" class="reinicio-container">
           <button class="btn" @click="reiniciar">🔄</button>
@@ -81,7 +81,8 @@ export default {
       modoEnfoque: false,
       enfoqueObjetivo: { x: 0, y: 0 },
       mostrarMenu: false,
-      borderState: ''
+      borderState: '',
+      botonDeshabilitado: false
     }
   },
   computed: {
@@ -290,34 +291,43 @@ export default {
     },
     
 responder(direccionJugador) {
-  const instruccionActual = this.instrucciones[this.paso]
-  if (!instruccionActual) return
+  if (this.botonDeshabilitado) return; // prevenir spameo
+  this.botonDeshabilitado = true;
+
+  const instruccionActual = this.instrucciones[this.paso];
+  if (!instruccionActual) {
+    this.botonDeshabilitado = false;
+    return;
+  }
 
   if (direccionJugador === instruccionActual.texto) {
-    this.borderState = 'correcto'
+    this.borderState = 'correcto';
 
     setTimeout(() => {
-      this.borderState = ''
-      this.paso++
-      this.esperandoRespuesta = false
-      this.iniciarMovimientoAutomatico()
-    }, 300) // el borde verde se muestra brevemente
+      this.borderState = '';
+      this.paso++;
+      this.esperandoRespuesta = false;
+      this.botonDeshabilitado = false;
+      this.iniciarMovimientoAutomatico();
+    }, 300);
   } else {
-    this.borderState = 'error'
+    this.borderState = 'error';
 
     setTimeout(() => {
-      this.borderState = ''
-      this.errores++
-      if (this.errores >= 3) {
-      this.finalizado = true;
-      this.mensajeFinal = '¡Fallaste!';
-      this.borderState = 'error';
+      this.borderState = '';
+      this.errores++;
+      this.botonDeshabilitado = false;
 
-      setTimeout(() => {
-        this.borderState = '';
-      }, 500);
+      if (this.errores >= 3) {
+        this.finalizado = true;
+        this.mensajeFinal = '¡Fallaste!';
+        this.borderState = 'error';
+
+        setTimeout(() => {
+          this.borderState = '';
+        }, 500);
       }
-    }, 300) // el borde rojo y vibración se muestran brevemente
+    }, 300);
   }
 },
 reiniciar() {
