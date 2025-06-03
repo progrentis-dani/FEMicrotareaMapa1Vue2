@@ -40,7 +40,7 @@
       <div class="info" v-if="juegoIniciado && !mostrarMenu">
         <h3 class="arcade-text">Info</h3>
         <p class="arcade-text">⏳ {{ formatoTiempo(tiempoRestante) }}</p>
-        <p class="arcade-text">👣 {{ paso }}</p>
+        <p class="arcade-text">🦶 {{ paso }}</p>
         <p class="arcade-text">❤️ {{ 3 - errores }}</p>
 
         <div class="info-controls" v-if="esperandoRespuesta && !finalizado">
